@@ -30,7 +30,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "~/components/ui/sidebar"
-import { ListCheckIcon } from "lucide-react"
+import { ListCheckIcon, UserIcon } from "lucide-react"
 
 const data = {
   user: {
@@ -43,6 +43,11 @@ const data = {
       title: "Dashboard",
       url: "/",
       icon: IconDashboard,
+    },
+    {
+      title: "Users",
+      url: "/users",
+      icon: UserIcon,
     },
     {
       title: "Tasks",
