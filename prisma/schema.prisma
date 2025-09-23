@@ -38,7 +38,6 @@ model Task {
   suggested_tests         String?
   content                 String?
   chat_history            String
-  completed               Boolean  @default(false)
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
   @@map("tasks")

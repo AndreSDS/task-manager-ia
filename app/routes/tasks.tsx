@@ -16,7 +16,6 @@ export async function loader() {
             suggested_tests: true,
             content: true,
             chat_history: true,
-            completed: true
         }
     });
 
