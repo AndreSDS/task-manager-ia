@@ -6,10 +6,8 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc",
-    "deploy": "gh-pages -d build"
+    "typecheck": "react-router typegen && tsc"
   },
-  "homepage": "https://AndreSDS.github.io/task-manager-ia",
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
@@ -64,7 +62,6 @@
     "@types/node": "^20",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
-    "gh-pages": "^6.3.0",
     "tailwindcss": "^4.1.13",
     "tsx": "^4.20.5",
     "typescript": "^5.8.3",
