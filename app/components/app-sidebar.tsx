@@ -15,6 +15,7 @@ import {
   IconSearch,
   IconSettings,
   IconUsers,
+  type Icon,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "~/components/nav-documents"

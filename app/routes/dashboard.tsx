@@ -2,6 +2,7 @@ import { SectionCards } from "~/components/section-cards"
 import { ChartAreaInteractive } from "~/components/chart-area-interactive"
 import { DataTable } from "~/components/data-table"
 import data from "../dashboard/data.json"
+import { dashboardColumns } from "~/dashboard/columns"
 
 export default function () {
   return (
@@ -10,7 +11,7 @@ export default function () {
       <div className="px-4 lg:px-6">
         <ChartAreaInteractive />
       </div>
-      <DataTable data={data} />
+      <DataTable data={data} columns={dashboardColumns} />
     </div>
   )
 }
