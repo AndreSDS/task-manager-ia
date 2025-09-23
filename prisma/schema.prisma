@@ -1,0 +1,45 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+generator client {
+  provider        = "prisma-client"
+  output          = "../app/generated/prisma"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  name          String
+  email         String    @unique
+  password_hash String
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  is_active     Int       @default(1)
+  last_login    DateTime?
+
+  @@map("users")
+}
+
+model Task {
+  id                      String   @id @default(uuid())
+  title                   String
+  description             String
+  steps                   String?
+  estimated_time          String?
+  implementation_suggestion String?
+  acceptance_criteria     String?
+  suggested_tests         String?
+  content                 String?
+  chat_history            String
+  completed               Boolean  @default(false)
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+  @@map("tasks")
+}
