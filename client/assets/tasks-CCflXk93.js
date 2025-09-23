@@ -1,0 +1,11 @@
+import{p as e,A as c,B as o,w as n}from"./chunk-B7RQU5TL-Dlr5QrnG.js";import{D as r}from"./data-table-B9tVTESo.js";import{c as i,B as s}from"./index-BNECFOSr.js";import"./dropdown-menu-h-96fEXl.js";import"./index-CNbaUzR8.js";/**
+ * @license lucide-react v0.544.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const d=[["path",{d:"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z",key:"1a8usu"}],["path",{d:"m15 5 4 4",key:"1mk7zo"}]],l=i("pencil",d);/**
+ * @license lucide-react v0.544.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const m=[["path",{d:"M10 11v6",key:"nco0om"}],["path",{d:"M14 11v6",key:"outv1u"}],["path",{d:"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6",key:"miytrc"}],["path",{d:"M3 6h18",key:"d0wm0j"}],["path",{d:"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",key:"e791ji"}]],h=i("trash-2",m),p=[{accessorKey:"title",header:"Title",cell:({row:t})=>e.jsx("div",{className:"capitalize",children:t.getValue("title")})},{accessorKey:"description",header:"Description",cell:({row:t})=>e.jsx("div",{className:"max-w-[400px] truncate overflow-hidden text-ellipsis whitespace-nowrap",children:t.getValue("description")})},{accessorKey:"created_at",header:"Created At",cell:({row:t})=>{const a=new Date(t.getValue("created_at"));return e.jsx("div",{children:a.toLocaleDateString()})}},{accessorKey:"estimated_time",header:"Estimated Time",cell:({row:t})=>e.jsx("div",{children:t.getValue("estimated_time")})},{id:"actions",enableHiding:!1,cell:({row:t})=>{const a=t.original;return e.jsxs("div",{className:"flex gap-2",children:[e.jsx(c,{to:`/tasks/${a.id}/edit`,children:e.jsx(s,{variant:"outline",size:"icon",children:e.jsx(l,{className:"h-4 w-4"})})}),e.jsx("form",{action:`/tasks/${a.id}/delete`,method:"post",children:e.jsx(s,{variant:"destructive",size:"icon",type:"submit",children:e.jsx(h,{className:"h-4 w-4"})})})]})}}];function u(){const{tasks:t}=o();return e.jsx("div",{className:"p-6",children:e.jsx(r,{data:t,columns:p})})}const f=n(function(){return e.jsx(u,{})});export{f as default};
