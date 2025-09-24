@@ -11,10 +11,12 @@ import type { loader } from "~/routes/task-new";
 import type { ChatMessage } from "~/features/tasks/types";
 export function ChatInterface() {
   const messageRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { chatId, messages } = useLoaderData<typeof loader>();
   const [isLoading, setIsLoading] = useState(false);
   const [streamedMessage, setStreamedMessage] = useState("");
   const [inputValue, setInputValue] = useState("");
+  const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
 
   const scrollToBottom = () => {
     messageRef && messageRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -22,12 +24,25 @@ export function ChatInterface() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streamedMessage]);
+  }, [messages, streamedMessage, optimisticMessages]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setStreamedMessage("");
+
+    // Cria mensagem otimista
+    const optimisticMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: "user",
+      content: inputValue,
+      timestamp: new Date(),
+      status: "pending"
+    } as any;
+    setOptimisticMessages((prev) => [...prev, optimisticMessage]);
+
+    setInputValue("");
+    inputRef.current?.focus();
 
     const formData = new FormData(e.currentTarget);
     const response = await fetch("/api/chat", {
@@ -37,6 +52,8 @@ export function ChatInterface() {
 
     if (!response.body) {
       setIsLoading(false);
+      // Remove mensagem otimista se falhar
+      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
       return;
     }
 
@@ -51,7 +68,8 @@ export function ChatInterface() {
       setStreamedMessage(result);
     }
     setIsLoading(false);
-    setInputValue("");
+    // Remove mensagem otimista após resposta
+    setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
   };
 
   return (
@@ -59,7 +77,7 @@ export function ChatInterface() {
       {/* Messages */}
       <ScrollArea className="flex-1 p-4 h-full overflow-y-auto">
         <div className="space-y-4 pr-4">
-          {messages.length === 0 && (
+          {messages.length === 0 && optimisticMessages.length === 0 && (
             <div className="text-center py-12">
               <Bot className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-foreground mb-2">
@@ -71,13 +89,15 @@ export function ChatInterface() {
             </div>
           )}
 
+          {/* Mensagens normais */}
           {messages.map((message: ChatMessage) => (
             <div
               key={message.id}
-              className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex gap-2 sm:gap-3 items-end ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              style={{ minWidth: 0 }}
             >
               {message.role === "assistant" && (
-                <Avatar className="w-8 h-8 bg-muted border">
+                <Avatar className="w-8 h-8 bg-muted border shrink-0">
                   <AvatarFallback>
                     <Bot className="w-4 h-4 text-muted-foreground" />
                   </AvatarFallback>
@@ -85,13 +105,14 @@ export function ChatInterface() {
               )}
 
               <Card
-                className={`max-w-[80%] p-4 gap-1 ${
+                className={`max-w-[75vw] sm:max-w-[60vw] p-3 sm:p-4 gap-1 ${
                   message.role === "user"
                     ? "bg-primary text-primary-foreground"
                     : "bg-card border shadow-sm"
                 }`}
+                style={{ wordBreak: "break-word", minWidth: 0 }}
               >
-                <p className="text-sm leading-relaxed">{message.content}</p>
+                <p className="text-sm leading-relaxed break-words">{message.content}</p>
                 <p className="text-xs opacity-70 text-right">
                   {new Date(message.timestamp).toLocaleTimeString([], {
                     hour: "2-digit",
@@ -102,12 +123,40 @@ export function ChatInterface() {
               </Card>
 
               {message.role === "user" && (
-                <Avatar className="w-8 h-8 bg-secondary border">
+                <Avatar className="w-8 h-8 bg-secondary border shrink-0">
                   <AvatarFallback>
                     <User className="w-4 h-4 text-secondary-foreground" />
                   </AvatarFallback>
                 </Avatar>
               )}
+            </div>
+          ))}
+
+          {/* Mensagens otimistas */}
+          {(optimisticMessages.length > 0 && (!messages.some(m => m.id === optimisticMessages[0].id))) && optimisticMessages.map((message: ChatMessage) => (
+            <div
+              key={message.id}
+              className="flex gap-2 sm:gap-3 items-end justify-end"
+              style={{ minWidth: 0 }}
+            >
+              <Card
+                className="max-w-[75vw] sm:max-w-[60vw] p-3 sm:p-4 gap-1 bg-primary text-primary-foreground opacity-70 relative"
+                style={{ wordBreak: "break-word", minWidth: 0 }}
+              >
+                <p className="text-sm leading-relaxed break-words">{message.content}</p>
+                <p className="text-xs opacity-70 text-right">
+                  {new Date(message.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}
+                </p>
+              </Card>
+              <Avatar className="w-8 h-8 bg-secondary border shrink-0">
+                <AvatarFallback>
+                  <User className="w-4 h-4 text-secondary-foreground" />
+                </AvatarFallback>
+              </Avatar>
             </div>
           ))}
 
@@ -154,6 +203,7 @@ export function ChatInterface() {
         <div className="flex-1 relative">
           <input type="hidden" name="chatId" value={chatId ?? ""} />
           <Input
+            ref={inputRef}
             name="message"
             placeholder="Descreva sua tarefa..."
             disabled={isLoading}

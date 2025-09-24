@@ -1,14 +1,15 @@
-import { TaskCard } from "~/components/task-card";
 import {
+  BookOpen,
+  CheckCircle,
   ClipboardList,
   Clock,
-  Lightbulb,
-  CheckCircle,
-  FlaskConical,
   Code,
-  BookOpen,
+  FlaskConical,
+  Lightbulb,
 } from "lucide-react";
+import { TaskCard } from "~/components/task-card";
 import { Button } from "~/components/ui/button";
+import { ScrollArea } from "~/components/ui/scroll-area";
 
 const mockTaskData = {
   title: "Secure Login Form with Authentication",
@@ -98,19 +99,22 @@ export default function TaskContent() {
   ];
 
   return (
-    <section>
-      <div className="grid gap-4 overflow-y-auto max-h-[calc(100vh-10rem)]"> {/* Adjust max-h as needed */}
-        {cardData.map((card, index) => (
-          <TaskCard
-            key={index}
-            title={card.title}
-            content={card.content}
-            icon={card.icon}
-          />
-        ))}
-      </div>
+    <section className="flex flex-col w-full mx-auto px-4 max-h-[calc(100vh-10rem)]">
+      <ScrollArea className="flex-1 p-4 h-full overflow-y-auto">
+        <div className="grid gap-4">
+          {cardData.map((card, index) => (
+            <TaskCard
+              key={index}
+              title={card.title}
+              content={card.content}
+              icon={card.icon}
+            />
+          ))}
+        </div>
+      </ScrollArea>
       <div className="flex justify-end pt-4">
         <Button>Salvar Task</Button>
       </div>
-    </section>);
+    </section>
+  );
 }

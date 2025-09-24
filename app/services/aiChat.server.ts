@@ -4,6 +4,16 @@ import { getApiKey, getEndpoint, loadEnvironment } from "~/lib/helpers";
 
 loadEnvironment();
 
+function cleanMarkdown(text: string): string {
+  return text
+    .replace(/\*{1,2}/g, "") // Remove asteriscos (negrito/itálico)
+    .replace(/`+/g, "") // Remove backticks
+    .replace(/^#+\s?/gm, "") // Remove hashes de títulos
+    .replace(/^-\s+/gm, "") // Remove traços de listas
+    .replace(/_/g, "") // Remove underscores
+    .replace(/\s{2,}/g, " ") // Remove múltiplos espaços
+    .trim();
+}
 
 export async function* getChatCompletionsStream(messages: ChatMessage[]) {
   try {
@@ -23,7 +33,6 @@ export async function* getChatCompletionsStream(messages: ChatMessage[]) {
     });
 
     for await (const chunk of stream) {
-      // chunk.choices[0]?.delta?.content pode conter parte da resposta
       const delta = chunk.choices?.[0]?.delta?.content;
       if (delta) yield delta;
     }
