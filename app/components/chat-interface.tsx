@@ -6,17 +6,27 @@ import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import type { ChatMessages } from "~/generated/prisma/client";
 import type { loader } from "~/routes/task-new";
 
-import type { ChatMessage } from "~/features/tasks/types";
 export function ChatInterface() {
+  const { chatId, messages } = useLoaderData<typeof loader>();
+
+  // Local state for messages sent but not yet in loader data
+  const [localMessages, setLocalMessages] = useState<ChatMessages[]>([]);
   const messageRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { chatId, messages } = useLoaderData<typeof loader>();
   const [isLoading, setIsLoading] = useState(false);
   const [streamedMessage, setStreamedMessage] = useState("");
   const [inputValue, setInputValue] = useState("");
-  const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
+  const [optimisticMessages, setOptimisticMessages] = useState<ChatMessages[]>([]);
+
+   // Limpa localMessages quando messages é atualizado pelo loader
+  useEffect(() => {
+    if (localMessages.length > 0) {
+      setLocalMessages([]);
+    }
+  }, [messages]);
 
   const scrollToBottom = () => {
     messageRef && messageRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,14 +42,15 @@ export function ChatInterface() {
     setStreamedMessage("");
 
     // Cria mensagem otimista
-    const optimisticMessage: ChatMessage = {
+    const optimisticMessage: ChatMessages = {
       id: Date.now().toString(),
       role: "user",
       content: inputValue,
       timestamp: new Date(),
       status: "pending"
     } as any;
-    setOptimisticMessages((prev) => [...prev, optimisticMessage]);
+  setOptimisticMessages((prev) => [...prev, optimisticMessage]);
+  setLocalMessages((prev) => [...prev, optimisticMessage]);
 
     setInputValue("");
     inputRef.current?.focus();
@@ -70,6 +81,18 @@ export function ChatInterface() {
     setIsLoading(false);
     // Remove mensagem otimista após resposta
     setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
+
+    // Adiciona a resposta do assistant ao estado local
+    const assistantMsg: ChatMessages = {
+      id: (Date.now() + 1).toString(),
+      role: "assistant",
+      content: result,
+      created_at: new Date(),
+    } as any;
+    setLocalMessages((prev) => [...prev, assistantMsg]);
+
+    // Limpa mensagens otimistas
+    setOptimisticMessages([]);
   };
 
   return (
@@ -89,8 +112,8 @@ export function ChatInterface() {
             </div>
           )}
 
-          {/* Mensagens normais */}
-          {messages.map((message: ChatMessage) => (
+          {/* Mensagens normais + locais */}
+          {[...messages, ...localMessages].map((message: ChatMessages) => (
             <div
               key={message.id}
               className={`flex gap-2 sm:gap-3 items-end ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -114,7 +137,7 @@ export function ChatInterface() {
               >
                 <p className="text-sm leading-relaxed break-words">{message.content}</p>
                 <p className="text-xs opacity-70 text-right">
-                  {new Date(message.timestamp).toLocaleTimeString([], {
+                  {new Date(message.created_at).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
                     hour12: true,
@@ -133,7 +156,7 @@ export function ChatInterface() {
           ))}
 
           {/* Mensagens otimistas */}
-          {(optimisticMessages.length > 0 && (!messages.some(m => m.id === optimisticMessages[0].id))) && optimisticMessages.map((message: ChatMessage) => (
+          {(optimisticMessages.length > 0 && (!messages.some(m => m.id === optimisticMessages[0].id))) && optimisticMessages.map((message: ChatMessages) => (
             <div
               key={message.id}
               className="flex gap-2 sm:gap-3 items-end justify-end"
@@ -145,7 +168,7 @@ export function ChatInterface() {
               >
                 <p className="text-sm leading-relaxed break-words">{message.content}</p>
                 <p className="text-xs opacity-70 text-right">
-                  {new Date(message.timestamp).toLocaleTimeString([], {
+                  {new Date(message.created_at).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
                     hour12: true,

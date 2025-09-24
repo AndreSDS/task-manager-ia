@@ -1,13 +1,13 @@
-import { Button } from "~/components/ui/button"
-import { Separator } from "~/components/ui/separator"
-import { SidebarTrigger } from "~/components/ui/sidebar"
 import { useLocation } from "react-router";
+import { Button } from "~/components/ui/button";
+import { Separator } from "~/components/ui/separator";
+import { SidebarTrigger } from "~/components/ui/sidebar";
 
 const ROUTE_TITLES: Record<string, string> = {
   "/": "Dashboard",
   "/dashboard": "Dashboard",
   "/tasks": "Tasks",
-  '/task/new': "Nova Task",
+  '/tasks/new': "Nova Task",
   "/task/edit": "Editar Task",
   "/users": "Usuarios"
 }

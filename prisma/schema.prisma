@@ -41,19 +41,38 @@ model Task {
   created_at                DateTime @default(now())
   updated_at                DateTime @updatedAt
 
-  chat   Chat?   @relation(fields: [chatId], references: [id])
-  chatId String? @unique
+  chat         Chat?          @relation(fields: [chatId], references: [id])
+  chatId       String?        @unique
 
   @@map("tasks")
 }
 
 model Chat {
-  id         String   @id @default(uuid())
-  title      String?
-  content    String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  task       Task?
+  id           String         @id @default(uuid())
+  title        String?
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
+  task         Task?
+  messages ChatMessages[]
 
   @@map("chats")
+}
+
+enum ChatMessageRole {
+  user
+  assistant
+  system
+}
+
+model ChatMessages {
+  id         String          @id @default(uuid())
+  content    String
+  role       ChatMessageRole @default(user)
+  created_at DateTime        @default(now())
+  updated_at DateTime        @updatedAt
+
+  chat    Chat    @relation(fields: [chat_id], references: [id], onDelete: Cascade)
+  chat_id String
+
+  @@map("chat_messages")
 }
