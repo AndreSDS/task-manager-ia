@@ -11,6 +11,7 @@ export async function action({ request }: { request: Request }) {
   let chat;
   let existingChat: any;
   let answerMessage: any;
+  let answerContent = "";
 
   const chatMessage = {
     role: ChatMessageRole.user,
@@ -20,69 +21,89 @@ export async function action({ request }: { request: Request }) {
   if (chatId) {
     existingChat = await prisma.chat.findUnique({
       where: { id: chatId },
+      include: { messages: true },
     });
   }
-
-  // Streaming response
-  let answerContent = "";
-  return new Response(
-    new ReadableStream({
-      async start(controller) {
-        for await (const chunk of getChatCompletionsStream([chatMessage])) {
-          answerContent += chunk;
-          controller.enqueue(chunk);
-        }
-        // Mensagem da IA montada, fecha stream
-        controller.close();
-
-        // Salva no banco após a stream estar completa
-        answerMessage = {
-          role: ChatMessageRole.assistant,
-          content: answerContent,
-        };
-
-        if (existingChat) {
-          await prisma.chatMessages.createMany({
-            data: [
-              {
-                chat_id: existingChat.id,
-                ...chatMessage,
-              },
-              {
-                chat_id: existingChat.id,
-                ...answerMessage,
-              },
-            ],
-          });
-        } else {
-          // Create new chat and get its ID
-          chat = await prisma.chat.create({
-            data: {},
-          });
-
-          await prisma.chatMessages.createMany({
-            data: [
-              {
-                chat_id: chat.id,
-                ...chatMessage,
-              },
-              {
-                chat_id: chat.id,
-                ...answerMessage,
-              },
-            ],
-          });
-
-          redirect(`tasks/new?chat=${chat.id}`)
-        }
-      },
-    }),
-    {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
+  
+  // Resposta para chat existente
+  if (existingChat) {
+    // Gera resposta da IA
+    for await (const chunk of getChatCompletionsStream([...existingChat.messages, chatMessage])) {
+      answerContent += chunk;
     }
-  );
+    answerMessage = {
+      role: ChatMessageRole.assistant,
+      content: answerContent,
+    };
+
+    await prisma.chatMessages.createMany({
+      data: [
+        {
+          chat_id: existingChat.id,
+          ...chatMessage,
+        },
+        {
+          chat_id: existingChat.id,
+          ...answerMessage,
+        },
+      ],
+    });
+
+    // Atualiza a Task vinculada ao chat, se existir
+    const existingTask = await prisma.task.findUnique({
+      where: { chatId: existingChat.id },
+    });
+    if (existingTask) {
+      await prisma.task.update({
+        where: { id: existingTask.id },
+        data: {
+          description: answerContent,
+          chat_history: `${existingTask.chat_history}\n${userMessage}\n${answerContent}`,
+          updated_at: new Date(),
+        },
+      });
+    }
+
+    // Redireciona após atualizar a task
+    return redirect(`tasks/new?chat=${existingChat.id}`);
+  } else {
+    // Criação de novo chat, chatMessages e task, depois redirect
+    let answerContent = "";
+    for await (const chunk of getChatCompletionsStream([chatMessage])) {
+      answerContent += chunk;
+    }
+    answerMessage = {
+      role: ChatMessageRole.assistant,
+      content: answerContent,
+    };
+
+    chat = await prisma.chat.create({
+      data: {},
+    });
+
+    await prisma.chatMessages.createMany({
+      data: [
+        {
+          chat_id: chat.id,
+          ...chatMessage,
+        },
+        {
+          chat_id: chat.id,
+          ...answerMessage,
+        },
+      ],
+    });
+
+    await prisma.task.create({
+      data: {
+        title: userMessage || "Nova Task",
+        description: answerContent || "Descrição gerada pela IA",
+        chat_history: `${userMessage}\n${answerContent}`,
+        chatId: chat.id,
+      },
+    });
+
+    // Retorna redirect corretamente
+    return redirect(`tasks/new?chat=${chat.id}`);
+  }
 }

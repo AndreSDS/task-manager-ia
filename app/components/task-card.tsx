@@ -1,17 +1,17 @@
-import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/card";
 import type { LucideIcon } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 
-interface TaskCardProps {
+export interface TaskCardProps {
   title: string;
   content: React.ReactNode;
-  icon: LucideIcon;
+  icon?: LucideIcon;
 }
 
 export function TaskCard({ title, content, icon: Icon }: TaskCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center space-x-2">
-        <Icon className="h-5 w-5" />
+        {Icon && <Icon className="h-5 w-5" />}
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>{content}</CardContent>

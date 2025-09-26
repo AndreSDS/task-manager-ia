@@ -1,48 +1,38 @@
-import {
-  BookOpen,
-  CheckCircle,
-  ClipboardList,
-  Clock,
-  Code,
-  FlaskConical,
-  Lightbulb,
-} from "lucide-react";
-import { TaskCard } from "~/components/task-card";
+import { BookOpen, CheckCircle, ClipboardList, Clock, Code, FlaskConical, Lightbulb } from "lucide-react";
+import { useLoaderData } from "react-router";
+import { TaskCard, type TaskCardProps } from "~/components/task-card";
 import { Button } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
-
-const mockTaskData = {
-  title: "Secure Login Form with Authentication",
-  description:
-    "Implement a modern login form with field validation, session-based authentication, and real-time error feedback.",
-  estimated_time: "2 days",
-  steps: [
-    "Create a form component using React",
-    "Add field validation using a suitable library",
-    "Connect backend for user authentication",
-    "Persist sessions using SQLite",
-    "Test full login and logout flow",
-  ],
-  suggested_tests: [
-    "it('should render login form correctly')",
-    "it('should validate input fields')",
-    "it('should authenticate valid credentials')",
-    "it('should prevent access with invalid credentials')",
-  ],
-  acceptance_criteria: [
-    "Login form displays properly with required fields",
-    "Invalid input is correctly flagged",
-    "Valid users can log in and maintain a session",
-    "Users are redirected upon login and logout",
-  ],
-  implementation_suggestion:
-    "Use React Hook Form for input validation, Prisma ORM for managing user data, and configure protected routes using React Router 7.",
-};
+import type { loader } from "~/routes/task-new";
 
 export default function TaskContent() {
-  const task = mockTaskData; // Replace with actual data from chatbot later
+  const { task } = useLoaderData<typeof loader>();
 
-  const cardData = [
+  if (!task.title) return null;
+
+  const stepsArray = Array.isArray(task.steps) ? (task.steps as string[]) : [];
+  const acceptanceCriteriaArray = Array.isArray(task.acceptance_criteria)
+    ? (task.acceptance_criteria as string[])
+    : [];
+  const suggestedTestsArray = Array.isArray(task.suggested_tests)
+    ? (task.suggested_tests as string[])
+    : [];
+
+  const listItems = (items: string | string[] | undefined) => {
+    if (!items) return null;
+    if (Array.isArray(items)) {
+      return (
+        <ul className="list-disc pl-5">
+          {items.map((item, index) => (
+            <li key={index}>{item}</li>
+          ))}
+        </ul>
+      );
+    }
+    return <p>{items}</p>;
+  };
+
+  const cardData: TaskCardProps[] = [
     {
       title: "Title",
       content: task.title,
@@ -60,35 +50,17 @@ export default function TaskContent() {
     },
     {
       title: "Steps",
-      content: (
-        <ul className="list-disc pl-5">
-          {task.steps.map((step, index) => (
-            <li key={index}>{step}</li>
-          ))}
-        </ul>
-      ),
+      content: listItems(stepsArray),
       icon: Lightbulb,
     },
     {
       title: "Acceptance Criteria",
-      content: (
-        <ul className="list-disc pl-5">
-          {task.acceptance_criteria.map((criteria, index) => (
-            <li key={index}>{criteria}</li>
-          ))}
-        </ul>
-      ),
+      content: listItems(acceptanceCriteriaArray),
       icon: CheckCircle,
     },
     {
       title: "Suggested Tests",
-      content: (
-        <ul className="list-disc pl-5">
-          {task.suggested_tests.map((test, index) => (
-            <li key={index}>{test}</li>
-          ))}
-        </ul>
-      ),
+      content: listItems(suggestedTestsArray),
       icon: FlaskConical,
     },
     {
@@ -102,12 +74,11 @@ export default function TaskContent() {
     <section className="flex flex-col w-full mx-auto px-4 max-h-[calc(100vh-10rem)]">
       <ScrollArea className="flex-1 p-4 h-full overflow-y-auto">
         <div className="grid gap-4">
-          {cardData.map((card, index) => (
+          {cardData.map((card) => (
             <TaskCard
-              key={index}
-              title={card.title}
+              key={card.title}
+              title={card.title || ""}
               content={card.content}
-              icon={card.icon}
             />
           ))}
         </div>
