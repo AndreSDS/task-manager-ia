@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import prisma from "prisma/prisma";
 import { ChatMessageRole } from "~/generated/prisma/enums";
 import { getApiKey, getEndpoint, loadEnvironment } from "~/lib/helpers";
 
@@ -59,14 +60,13 @@ Saida JSON esperada:
   "estimated_time": "2 dias",
   "implementation_suggestion": "Use React Hook Form para validacao. Prisma ORM para gerenciamento de usuarios e configure rotas protegidas com React Router 7."
 }
-`
+`;
+export type Message = {
+  role: ChatMessageRole;
+  content: string;
+};
 
-export async function* getChatCompletionsStream(
-  messages: {
-    role: ChatMessageRole;
-    content: string;
-  }[]
-) {
+export async function getChatCompletion(messages: Message[]) {
   try {
     const token = getApiKey("GITHUB_MODELS_TOKEN");
     const endpoint = getEndpoint("GITHUB_MODELS_ENDPOINT");
@@ -77,22 +77,39 @@ export async function* getChatCompletionsStream(
     const systemMessage = {
       role: ChatMessageRole.system,
       content: SYSTEM_PROMPT,
-    }
+    };
 
-    const stream = await client.chat.completions.create({
+    const completion = await client.chat.completions.create({
       messages: [systemMessage, ...messages],
       temperature: 0,
       top_p: 1.0,
       max_tokens: 1000,
       model: modelName,
-      stream: true,
+      stream: false,
     });
 
-    for await (const chunk of stream) {
-      const delta = chunk.choices?.[0]?.delta?.content;
-      if (delta) yield delta;
-    }
+    return completion.choices?.[0]?.message?.content || "";
   } catch (error) {
     console.error("Erro:", error instanceof Error ? error.message : error);
+    return "";
   }
+}
+
+export async function createChatMessages(
+  chatId: string,
+  chatMessage: Message,
+  messages: Message
+) {
+  await prisma.chatMessages.createMany({
+    data: [
+      {
+        chat_id: chatId,
+        ...chatMessage,
+      },
+      {
+        chat_id: chatId,
+        ...messages,
+      },
+    ],
+  });
 }

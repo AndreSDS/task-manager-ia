@@ -1,6 +1,6 @@
 import { Bot, Send, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useLoaderData } from "react-router";
+import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -10,23 +10,28 @@ import type { ChatMessages } from "~/generated/prisma/client";
 import type { loader } from "~/routes/task-new";
 
 export function ChatInterface() {
+  // ...existing code...
+  // Place this effect after all relevant variables are declared
+  const fetcher = useFetcher();
+  const navigate = useNavigate();
   const { chatId, messages } = useLoaderData<typeof loader>();
-
-  // Local state for messages sent but not yet in loader data
-  const [localMessages, setLocalMessages] = useState<ChatMessages[]>([]);
   const messageRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [streamedMessage, setStreamedMessage] = useState("");
   const [inputValue, setInputValue] = useState("");
-  const [optimisticMessages, setOptimisticMessages] = useState<ChatMessages[]>([]);
-
-   // Limpa localMessages quando messages é atualizado pelo loader
+  const [optimisticMessages, setOptimisticMessages] = useState<ChatMessages[]>(
+    []
+  );
+  // Ensure user's message always remains visible
   useEffect(() => {
-    if (localMessages.length > 0) {
-      setLocalMessages([]);
+    if (optimisticMessages.length === 0) return;
+    // If the backend returned a message with the same content and role, remove only the optimistic message
+    const lastOptimistic = optimisticMessages[0];
+    if (messages.some((m) => m.content === lastOptimistic.content && m.role === "user")) {
+      setOptimisticMessages([]);
     }
-  }, [messages]);
+    // If the backend does NOT return the same content, keep the optimistic message
+    // This ensures the user's message is always visible
+  }, [messages, optimisticMessages]);
 
   const scrollToBottom = () => {
     messageRef && messageRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -34,66 +39,50 @@ export function ChatInterface() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streamedMessage, optimisticMessages]);
+  }, [messages, optimisticMessages]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    setStreamedMessage("");
+
+    if (!inputValue.trim()) return;
+
+    const now = Date.now().toString();
+    const date = new Date();
 
     // Cria mensagem otimista
     const optimisticMessage: ChatMessages = {
-      id: Date.now().toString(),
+      chat_id: now,
+      id: now,
       role: "user",
       content: inputValue,
-      timestamp: new Date(),
-      status: "pending"
-    } as any;
-  setOptimisticMessages((prev) => [...prev, optimisticMessage]);
-  setLocalMessages((prev) => [...prev, optimisticMessage]);
+      created_at: date,
+      updated_at: date,
+    };
+
+    setOptimisticMessages((prev) => [...prev, optimisticMessage]);
 
     setInputValue("");
+
     inputRef.current?.focus();
 
-    const formData = new FormData(e.currentTarget);
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.body) {
-      setIsLoading(false);
-      // Remove mensagem otimista se falhar
-      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let result = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value);
-      result += chunk;
-      setStreamedMessage(result);
-    }
-    setIsLoading(false);
-    // Remove mensagem otimista após resposta
-    setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
-
-    // Adiciona a resposta do assistant ao estado local
-    const assistantMsg: ChatMessages = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: result,
-      created_at: new Date(),
-    } as any;
-    setLocalMessages((prev) => [...prev, assistantMsg]);
-
-    // Limpa mensagens otimistas
-    setOptimisticMessages([]);
+    fetcher.submit(
+      {
+        chatId: chatId ?? "",
+        message: inputValue,
+      },
+      { method: "POST", action: "/api/chat" }
+    );
   };
+
+  // isLoading is true when request is being sent (submitting or loading)
+  const isLoading = fetcher.state === "submitting" || fetcher.state === "loading";
+
+  useEffect(() => {
+    if (!fetcher.data) return;
+    if (fetcher.data.redirect) {
+      navigate(fetcher.data.redirect);
+    }
+  }, [fetcher.data, navigate]);
 
   return (
     <div className="flex flex-col w-full mx-auto px-4  overflow-y-auto max-h-[calc(100vh-10rem)]">
@@ -113,7 +102,7 @@ export function ChatInterface() {
           )}
 
           {/* Mensagens normais + locais */}
-          {[...messages, ...localMessages].map((message: ChatMessages) => (
+          {messages.map((message: ChatMessages) => (
             <div
               key={message.id}
               className={`flex gap-2 sm:gap-3 items-end ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -135,7 +124,9 @@ export function ChatInterface() {
                 }`}
                 style={{ wordBreak: "break-word", minWidth: 0 }}
               >
-                <p className="text-sm leading-relaxed break-words">{message.content}</p>
+                <p className="text-sm leading-relaxed break-words">
+                  {message.content}
+                </p>
                 <p className="text-xs opacity-70 text-right">
                   {new Date(message.created_at).toLocaleTimeString([], {
                     hour: "2-digit",
@@ -156,32 +147,36 @@ export function ChatInterface() {
           ))}
 
           {/* Mensagens otimistas */}
-          {(optimisticMessages.length > 0 && (!messages.some(m => m.id === optimisticMessages[0].id))) && optimisticMessages.map((message: ChatMessages) => (
-            <div
-              key={message.id}
-              className="flex gap-2 sm:gap-3 items-end justify-end"
-              style={{ minWidth: 0 }}
-            >
-              <Card
-                className="max-w-[75vw] sm:max-w-[60vw] p-3 sm:p-4 gap-1 bg-primary text-primary-foreground opacity-70 relative"
-                style={{ wordBreak: "break-word", minWidth: 0 }}
+          {optimisticMessages.length > 0 &&
+            !messages.some((m) => m.id === optimisticMessages[0].id) &&
+            optimisticMessages.map((message: ChatMessages) => (
+              <div
+                key={message.id}
+                className="flex gap-2 sm:gap-3 items-end justify-end"
+                style={{ minWidth: 0 }}
               >
-                <p className="text-sm leading-relaxed break-words">{message.content}</p>
-                <p className="text-xs opacity-70 text-right">
-                  {new Date(message.created_at).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
-                  })}
-                </p>
-              </Card>
-              <Avatar className="w-8 h-8 bg-secondary border shrink-0">
-                <AvatarFallback>
-                  <User className="w-4 h-4 text-secondary-foreground" />
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          ))}
+                <Card
+                  className="max-w-[75vw] sm:max-w-[60vw] p-3 sm:p-4 gap-1 bg-primary text-primary-foreground opacity-70 relative"
+                  style={{ wordBreak: "break-word", minWidth: 0 }}
+                >
+                  <p className="text-sm leading-relaxed break-words">
+                    {message.content}
+                  </p>
+                  <p className="text-xs opacity-70 text-right">
+                    {new Date(message.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}
+                  </p>
+                </Card>
+                <Avatar className="w-8 h-8 bg-secondary border shrink-0">
+                  <AvatarFallback>
+                    <User className="w-4 h-4 text-secondary-foreground" />
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            ))}
 
           {isLoading && (
             <div className="flex gap-3 justify-start">
@@ -203,20 +198,7 @@ export function ChatInterface() {
             </div>
           )}
 
-          {streamedMessage && (
-            <div className="flex gap-3 justify-start">
-              <Avatar className="w-8 h-8 bg-muted border">
-                <AvatarFallback>
-                  <Bot className="w-4 h-4 text-muted-foreground" />
-                </AvatarFallback>
-              </Avatar>
-              <Card className="bg-card border shadow-sm p-4">
-                <p className="text-sm leading-relaxed whitespace-pre-line">
-                  {streamedMessage}
-                </p>
-              </Card>
-            </div>
-          )}
+          {/* streamedMessage removed */}
           <div ref={messageRef} />
         </div>
       </ScrollArea>
@@ -224,7 +206,6 @@ export function ChatInterface() {
       {/* Input */}
       <form onSubmit={handleSubmit} className="flex gap-2 w-full">
         <div className="flex-1 relative">
-          <input type="hidden" name="chatId" value={chatId ?? ""} />
           <Input
             ref={inputRef}
             name="message"
