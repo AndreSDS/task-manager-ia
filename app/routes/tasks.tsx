@@ -14,8 +14,7 @@ export async function loader() {
             implementation_suggestion: true,
             acceptance_criteria: true,
             suggested_tests: true,
-            content: true,
-            chat_history: true,
+            content: true
         }
     });
 

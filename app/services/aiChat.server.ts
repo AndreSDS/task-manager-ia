@@ -100,16 +100,21 @@ export async function createChatMessages(
   chatMessage: Message,
   messages: Message
 ) {
-  await prisma.chatMessages.createMany({
-    data: [
-      {
-        chat_id: chatId,
-        ...chatMessage,
-      },
-      {
-        chat_id: chatId,
-        ...messages,
-      },
-    ],
+  // Criar a mensagem do usuário
+  await prisma.chatMessages.create({
+    data: {
+      chat_id: chatId,
+      ...chatMessage,
+    },
   });
+
+  // Criar e retornar a mensagem do assistente
+  const assistantMessage = await prisma.chatMessages.create({
+    data: {
+      chat_id: chatId,
+      ...messages,
+    },
+  });
+
+  return assistantMessage;
 }

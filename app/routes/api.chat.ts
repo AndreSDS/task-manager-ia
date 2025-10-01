@@ -33,19 +33,37 @@ export async function action({ request }: { request: Request }) {
       role: ChatMessageRole.assistant,
     };
 
-    await createChatMessages(chatId, userMessage, assistantMessage);
+    const assistantMessageRecord = await createChatMessages(chatId, userMessage, assistantMessage);
 
-    const existingTask = await prisma.task.findUnique({
-      where: { chatId },
+    // Buscar task existente relacionada a este chat
+    const existingTask = await prisma.task.findFirst({
+      where: {
+        chat_message_id: {
+          in: chat.messages.map(msg => msg.id)
+        }
+      },
     });
 
     if (existingTask) {
+      // Atualizar a task existente
       await prisma.task.update({
         where: { id: existingTask.id },
         data: {
+          title: userMessage.content || existingTask.title,
           description: assistantMessage.content,
-          chat_history: `${existingTask.chat_history}\n${userMessage}\n${assistantMessage.content}`,
+          chat_history: `${existingTask.chat_history || ''}\n${userMessage.content}\n${assistantMessage.content}`,
+          chat_message_id: assistantMessageRecord.id, // Associar à nova mensagem do assistente
           updated_at: new Date(),
+        },
+      });
+    } else {
+      // Criar uma nova task e associar à última mensagem do assistente
+      await prisma.task.create({
+        data: {
+          title: userMessage.content || "Nova Task",
+          description: assistantMessage.content || "Descrição gerada pela IA", 
+          chat_history: `${userMessage.content}\n${assistantMessage.content}`,
+          chat_message_id: assistantMessageRecord.id,
         },
       });
     }
@@ -61,14 +79,14 @@ export async function action({ request }: { request: Request }) {
       data: {},
     });
 
-    await createChatMessages(chat.id, userMessage, assistantMessage);
+    const assistantMessageRecord = await createChatMessages(chat.id, userMessage, assistantMessage);
 
     await prisma.task.create({
       data: {
         title: userMessage.content || "Nova Task",
         description: assistantMessage.content || "Descrição gerada pela IA",
-        chat_history: `${userMessage.content}\n${assistantMessage}`,
-        chatId: chat.id,
+        chat_history: `${userMessage.content}\n${assistantMessage.content}`,
+        chat_message_id: assistantMessageRecord.id,
       },
     });
 

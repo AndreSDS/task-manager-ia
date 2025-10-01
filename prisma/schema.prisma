@@ -14,19 +14,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            Int       @id @default(autoincrement())
-  name          String
-  email         String    @unique
-  password_hash String
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
-  is_active     Int       @default(1)
-  last_login    DateTime?
-
-  @@map("users")
-}
-
 model Task {
   id                        String   @id @default(uuid())
   title                     String
@@ -37,23 +24,22 @@ model Task {
   acceptance_criteria       String?
   suggested_tests           String?
   content                   String?
-  chat_history              String
+  chat_history              String?
   created_at                DateTime @default(now())
   updated_at                DateTime @updatedAt
 
-  chat         Chat?          @relation(fields: [chatId], references: [id])
-  chatId       String?        @unique
+  chat_messages   ChatMessages? @relation(fields: [chat_message_id], references: [id])
+  chat_message_id String?       @unique
 
   @@map("tasks")
 }
 
 model Chat {
-  id           String         @id @default(uuid())
-  title        String?
-  created_at   DateTime       @default(now())
-  updated_at   DateTime       @updatedAt
-  task         Task?
-  messages ChatMessages[]
+  id         String         @id @default(uuid())
+  title      String?
+  created_at DateTime       @default(now())
+  updated_at DateTime       @updatedAt
+  messages   ChatMessages[]
 
   @@map("chats")
 }
@@ -71,8 +57,10 @@ model ChatMessages {
   created_at DateTime        @default(now())
   updated_at DateTime        @updatedAt
 
-  chat    Chat    @relation(fields: [chat_id], references: [id], onDelete: Cascade)
+  chat    Chat   @relation(fields: [chat_id], references: [id], onDelete: Cascade)
   chat_id String
+
+  task Task?
 
   @@map("chat_messages")
 }
